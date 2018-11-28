@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+<title>Mapa Visualizador Tracks</title>
+    <link rel="stylesheet" href="https://openlayers.org/en/v3.20.1/css/ol.css" type="text/css">
+    		<link href='https://unpkg.com/ol-layerswitcher@3.0.0/src/ol-layerswitcher.css' rel='stylesheet'/>
+    <!-- The line below is only needed for old environments like Internet Explorer and Android 4.x -->
+    <script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=requestAnimationFrame,Element.prototype.classList,URL"></script>
+    <script src="https://openlayers.org/en/v3.20.1/build/ol.js"></script>
+       <script src="https://unpkg.com/ol-layerswitcher@3.0.0"></script>
+	<style>
+		#map{		
+		width:100%;
+		height:100%;
+		}
+	</style>
+</head>
+  <body>
+   <div id="map"></div>
+ <script>
+       var defaultStyle = {
+        'Point': new ol.style.Style({
+          image: new ol.style.Circle({
+            fill: new ol.style.Fill({
+              color: 'rgba(255,255,0,0.5)'
+            }),
+            radius: 5,
+            stroke: new ol.style.Stroke({
+              color: '#ff0000',
+              width: 1
+            })
+          })
+        }),
+        'LineString': new ol.style.Style({
+          stroke: new ol.style.Stroke({
+            color: '#f00',
+            width: 3
+          })
+        }),
+        'Polygon': new ol.style.Style({
+          fill: new ol.style.Fill({
+            color: 'rgba(255,0,0,0.5)'
+          }),
+          stroke: new ol.style.Stroke({
+            color: '#0ff',
+            width: 1
+          })
+        }),
+        'MultiPoint': new ol.style.Style({
+          image: new ol.style.Circle({
+            fill: new ol.style.Fill({
+              color: 'rgba(255,255,0,0.5)'
+            }),
+            radius: 5,
+            stroke: new ol.style.Stroke({
+              color: '#ff0000',
+              width: 1
+            })
+          })
+        }),
+        'MultiLineString': new ol.style.Style({
+          stroke: new ol.style.Stroke({
+            color: '#F0A55B',
+            width: 3
+          })
+        }),
+        'MultiPolygon': new ol.style.Style({
+          fill: new ol.style.Fill({
+            color: 'rgba(0,0,255,0.5)'
+          }),
+          stroke: new ol.style.Stroke({
+            color: '#00f',
+            width: 1
+          })
+        })
+      };
+
+      var styleFunction = function(feature, resolution) {
+        var featureStyleFunction = feature.getStyleFunction();
+        if (featureStyleFunction) {
+          return featureStyleFunction.call(feature, resolution);
+        } else {
+          return defaultStyle[feature.getGeometry().getType()];
+        }
+      };
+
+      var dragAndDropInteraction = new ol.interaction.DragAndDrop({
+        formatConstructors: [
+          ol.format.GPX,
+          ol.format.GeoJSON,
+          ol.format.IGC,
+          ol.format.KML,
+          ol.format.TopoJSON
+        ]
+      });
+/*---------------------------------*/
+		var projection = ol.proj.get('EPSG:4326');
+		//var projection = ol.proj.get('EPSG:3857');
+		var projectionExtent = projection.getExtent();
+        var size = ol.extent.getWidth(projectionExtent) / 512;
+        //var size = ol.extent.getWidth(projectionExtent) / 256;
+		var resolutions = new Array(18);
+		var matrixIds = new Array(18);
+		for (var z = 0; z < 18; ++z) {
+		  // generate resolutions and matrixIds arrays for this WMTS
+		  resolutions[z] = size / Math.pow(2, z);
+		  matrixIds[z] = "EPSG:4326:" + z;
+		  //matrixIds[z] = z;
+		}
+		var map = new ol.Map({
+		          interactions: ol.interaction.defaults().extend([dragAndDropInteraction]),
+		  layers: [
+    new ol.layer.Tile({
+  title: 'Esri',
+        type: 'base',
+        visible: false,
+        source: new ol.source.XYZ({
+        attributions: '<a target="_blank" href="https://openlayers.org/">OpenLayers</a> © <a target="_blank" href="https://services.arcgisonline.com/ArcGIS/' +
+                  'rest/services/World_Topo_Map/MapServer">ArcGIS</a>',
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/' +
+                  'World_Topo_Map/MapServer/tile/{z}/{y}/{x}'
+            })
+          }),
+    new ol.layer.Tile({
+        title: 'Terrain',
+        type: 'base',
+        visible: false,
+        source: new ol.source.Stamen({
+         layer: 'terrain'
+          })
+       }),
+    new ol.layer.Tile({
+        title: 'OpenStreetMap',
+        type: 'base',
+        visible: false,
+        source: new ol.source.OSM({
+  attributions: [
+            '<a target="_blank" href="https://openlayers.org/">OpenLayers</a>',
+            ol.source.OSM.ATTRIBUTION
+          ],
+    })
+       }),
+    new ol.layer.Tile({
+        title: 'OpenCycleMap',
+        type: 'base',
+        visible: true,
+        source: new ol.source.OSM({
+          attributions: [
+            '<a target="_blank" href="https://openlayers.org/">OpenLayers</a> © <a target="_blank" href="https://www.opencyclemap.org/">OpenCycleMap</a>',
+            ol.source.OSM.ATTRIBUTION
+          ],
+          url: 'https://{a-c}.tile.thunderforest.com/cycle/{z}/{x}/{y}.png' +
+              '?apikey=081ff7d83c0549c7a758fdd4df478f0f'
+    })
+       }),
+                  new ol.layer.Tile({
+        title: 'Bing Aerial/Road',
+        type: 'base',
+        visible: true,
+      source: new ol.source.BingMaps({
+        key: 'AudCyoI6al0eAZmQhwmI1IG9AOdGH8DHHk6PsiGta1faEACulxawFU9KV-XAvZ8f',
+        imagerySet: 'AerialWithLabels'
+      })
+    }),
+               new ol.layer.Tile({
+        title: 'Bing Road',
+        type: 'base',
+        visible: true,
+      source: new ol.source.BingMaps({
+        key: 'AudCyoI6al0eAZmQhwmI1IG9AOdGH8DHHk6PsiGta1faEACulxawFU9KV-XAvZ8f',
+        imagerySet: 'Road'
+      })
+    }),
+                      new ol.layer.Tile({
+        title: 'Bing Aerial',
+        type: 'base',
+        visible: true,
+      source: new ol.source.BingMaps({
+        key: 'AudCyoI6al0eAZmQhwmI1IG9AOdGH8DHHk6PsiGta1faEACulxawFU9KV-XAvZ8f',
+        imagerySet: 'Aerial'
+      })
+    }),
+           new ol.layer.Tile({
+   title: 'Pnoa',
+   type: 'base',
+           visible: true,
+     opacity: 0.8,
+     extent: projectionExtent,
+     source: new ol.source.WMTS({
+     attributions: [
+    '<a target="_blank" href="https://openlayers.org/">OpenLayers</a> Teselas de PNOA cedido por © Instituto Geográfico Nacional de España'
+   ],
+    url: 'http://www.ign.es/wmts/pnoa-ma',
+                                layer: 'OI.OrthoimageCoverage',
+    matrixSet: 'EPSG:4326',
+    format: 'image/png',
+    projection: projection,
+    tileGrid: new ol.tilegrid.WMTS({
+      origin: ol.extent.getTopLeft(projectionExtent),
+      resolutions: resolutions,
+      matrixIds: matrixIds
+    }),
+    style: 'default'
+     })
+   }),
+		  ],
+		  target: 'map',
+		  controls: ol.control.defaults({
+			attributionOptions: /** @type {olx.control.AttributionOptions} */ ({
+			  collapsible: true
+			})
+		  }),
+		  view: new ol.View({
+			projection: 'EPSG:4326',
+			center: [-3.9991666666666665, 39.80000000],
+			zoom: 6
+		})
+	     });	
+	     	/*-----------------------*/
+	     	      dragAndDropInteraction.on('addfeatures', function(event) {
+        var vectorSource = new ol.source.Vector({
+          features: event.features
+        });
+        map.addLayer(new ol.layer.Vector({
+          source: vectorSource,
+          style: styleFunction
+        }));
+        map.getView().fit(
+            vectorSource.getExtent(), /** @type {ol.Size} */ (map.getSize()));
+      });
+
+      var displayFeatureInfo = function(pixel) {
+        var features = [];
+        map.forEachFeatureAtPixel(pixel, function(feature) {
+          features.push(feature);
+        });
+        if (features.length > 0) {
+          var info = [];
+          var i, ii;
+          for (i = 0, ii = features.length; i < ii; ++i) {
+            info.push(features[i].get('name'));
+          }
+          document.getElementById('info').innerHTML = info.join(', ') || '&nbsp';
+        } else {
+          document.getElementById('info').innerHTML = '&nbsp;';
+        }
+      };
+
+      map.on('pointermove', function(evt) {
+        if (evt.dragging) {
+          return;
+        }
+        var pixel = map.getEventPixel(evt.originalEvent);
+        displayFeatureInfo(pixel);
+      });
+
+      map.on('click', function(evt) {
+        displayFeatureInfo(evt.pixel);
+      });
+map.addControl(new ol.control.LayerSwitcher());
+ </script>
+<br>
+</html>
